@@ -37,6 +37,8 @@ void workerThreadStart(WorkerArgs * const args) {
 
     // printf("Hello world from thread %d\n", args->threadId);
 
+    double startTime = CycleTimer::currentSeconds();
+    
     // partition into chunks of rows, last thread will get remainder
     int rowsPerThread = args->height / args->numThreads;
     int startRow = args->threadId * rowsPerThread;
@@ -46,10 +48,28 @@ void workerThreadStart(WorkerArgs * const args) {
     
     printf("i'm thread %d writing %d rows\n", args->threadId, rowsPerThread);
 
-    
     mandelbrotSerial(args->x0, args->y0, args->x1, args->y1, 
                      args->width, args->height, startRow, rowsPerThread,
                      args->maxIterations, args->output);
+
+    double endTime = CycleTimer::currentSeconds();
+    printf("  thread %d finished in: %.3f ms\n", args->threadId, (endTime - startTime) * 1000);
+}
+
+void workerThreadStartImproved(WorkerArgs * const args) {
+    double startTime = CycleTimer::currentSeconds();
+
+    // each thread will stride by numThreads for even distribution
+    // no one thread will overburdened with a big chunk of fractals
+    for (unsigned int i = args->threadId; i < args->height; i += args->numThreads) {
+        // write a single row
+        mandelbrotSerial(args->x0, args->y0, args->x1, args->y1, 
+            args->width, args->height, i, 1,
+            args->maxIterations, args->output);
+    }
+
+    double endTime = CycleTimer::currentSeconds();
+    printf("  thread %d finished in: %.3f ms\n", args->threadId, (endTime - startTime) * 1000);
 }
 
 //
@@ -96,10 +116,12 @@ void mandelbrotThread(
     // are created and the main application thread is used as a worker
     // as well.
     for (int i=1; i<numThreads; i++) {
-        workers[i] = std::thread(workerThreadStart, &args[i]);
+        // workers[i] = std::thread(workerThreadStart, &args[i]);
+        workers[i] = std::thread(workerThreadStartImproved, &args[i]);
     }
     
-    workerThreadStart(&args[0]);
+    // workerThreadStart(&args[0]);
+    workerThreadStartImproved(&args[0]);
 
     // join worker threads
     for (int i=1; i<numThreads; i++) {
