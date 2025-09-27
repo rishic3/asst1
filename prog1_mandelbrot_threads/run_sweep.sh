@@ -1,7 +1,9 @@
 #!/bin/bash
 
 view="${1:-1}"
-results_file="results_view_${view}_$(date +%Y%m%d_%H%M%S).txt"
+
+mkdir -p results
+results_file="results/results_view_${view}_$(date +%Y%m%d_%H%M%S).txt"
 echo "num threads: speedup" > $results_file
 
 for i in {2..8}
