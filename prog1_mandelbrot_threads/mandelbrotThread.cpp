@@ -60,7 +60,7 @@ void workerThreadStartImproved(WorkerArgs * const args) {
     double startTime = CycleTimer::currentSeconds();
 
     // each thread will stride by numThreads for even distribution
-    // no one thread will overburdened with a big chunk of fractals
+    // no one thread is overburdened with a chunk of dense fractal compute
     for (unsigned int i = args->threadId; i < args->height; i += args->numThreads) {
         // write a single row
         mandelbrotSerial(args->x0, args->y0, args->x1, args->y1, 
