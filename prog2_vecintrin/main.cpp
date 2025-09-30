@@ -25,7 +25,7 @@ int main(int argc, char * argv[]) {
   int N = 16;
   bool printLog = false;
 
-  printf("Vector width: %d\n", VECTOR_WIDTH);
+  printf("VECTOR_WIDTH: %d\n", VECTOR_WIDTH);
 
   // parse commandline options ////////////////////////////////////////////
   int opt;
@@ -335,75 +335,46 @@ float arraySumVector(float* values, int N) {
     // ex.
     // N = 8, vector_width=4
     // [1, 5, 2, 6, 9, 7, 9, 1]  , sum = 40
+    
+    // partial merge O(N/VECTOR_WIDTH)
+    // result = [0, 0, 0, 0]
+    // += [1, 5, 2, 6]  // v1
+    // += [9, 7, 9, 1]  // v2
 
-    // v1 = [1, 5, 2, 6]
-    // [6, 6, 8, 8] hadd
-    // [6, 8, 6, 8] interleave
-    // [14, 14, 14, 14] hadd
+    // post-merge O(log2(VECTOR_WIDTH))
+    // [10, 12, 11, 7]
+    // [22, 22, 18, 18] hadd
+    // [22, 18, 22, 18] interleave
+    // [40, 40, 40, 40] hadd
 
-    // v2 = [9, 7, 9, 1]
-    // [16, 16, 10, 10] hadd
-    // [16, 10, 16, 10] interleave
-    // [26, 26, 26, 26] hadd
+    // return result[0]
 
-    // [v1[0], v2[0]] = [14, 26]
-    // [40, 40] hadd
-
-    // log2(VECTOR_WIDTH)=2 partial merges per vector
-    // log2(N/VECTOR_WIDTH)=1 final merges
-
-    // set identity to zero if N/VECTOR_WIDTH doesn't fill a full vector
-    __cs149_vec_float result = _cs149_vset_float(0.f);
+    __cs149_vec_float result = _cs149_vset_float(0.0f);
     __cs149_mask maskAll = _cs149_init_ones();
-    __cs149_vec_float temp;
 
     for (int i=0; i<N; i+=VECTOR_WIDTH) {
-        int vecMergeIters = (int)log2(VECTOR_WIDTH);
+        // printf("\niter %d\n", i);
 
+        // load in values
         __cs149_vec_float partialResult;
         _cs149_vload_float(partialResult, values+i, maskAll);
 
-        // printf("\niter %d\n", i);
-
-        // partial merge within each vector
-        _cs149_hadd_float(partialResult, partialResult);
-        vecMergeIters--;
-
-        for (int j=0; j<vecMergeIters; ++j) {
-            temp = partialResult;  // can't interleave in-place
-            _cs149_interleave_float(partialResult, temp);
-            _cs149_hadd_float(partialResult, partialResult);
-        }
-
-        // store partial sum to result at i/VECTOR_WIDTH idx (this vector's location)
-        // make two masks overlapping at bit i/VECTOR_WIDTH
-        // do a manual XOR via (A AND NOT B) OR (NOT A AND B)
-        __cs149_mask mask1 = _cs149_init_ones(i / VECTOR_WIDTH);
-        __cs149_mask maskNot1 = _cs149_mask_not(mask1);
-        __cs149_mask mask2 = _cs149_init_ones(i / VECTOR_WIDTH + 1);
-        __cs149_mask maskNot2 = _cs149_mask_not(mask2);
-        __cs149_mask mask1AndNot2 = _cs149_mask_and(mask1, maskNot2);
-        __cs149_mask maskNot1And2 = _cs149_mask_and(maskNot1, mask2);
-        __cs149_mask maskDestLoc = _cs149_mask_or(mask1AndNot2, maskNot1And2);
-
-        // store to result
-        _cs149_vmove_float(result, partialResult, maskDestLoc);
+        // add all values in parallel
+        _cs149_vadd_float(result, result, partialResult, maskAll);
     }
 
-    int postMergeIters = (int)log2(N) - (int)log2(VECTOR_WIDTH);
-
-    // final merge across vectors
+    int mergeIters = (int)log2(VECTOR_WIDTH);
     _cs149_hadd_float(result, result);
-    postMergeIters--;
+    mergeIters--;
 
-    for (int i=0; i<postMergeIters; ++i) {
-        temp = result;
+    __cs149_vec_float temp;
+    for (int i=0; i<mergeIters; i++) {
+        temp = result;  // can't interleave in-place
         _cs149_interleave_float(result, temp);
         _cs149_hadd_float(result, result);
     }
 
-    // store first element (final aggregation) to sum and return
-    float sum;
+    float sum = 0.0f;
     __cs149_mask firstElement = _cs149_init_ones(1);
     _cs149_vstore_float(&sum, result, firstElement);
 
