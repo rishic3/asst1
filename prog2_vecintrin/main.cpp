@@ -340,12 +340,13 @@ float arraySumVector(float* values, int N) {
     // result = [0, 0, 0, 0]
     // += [1, 5, 2, 6]  // v1
     // += [9, 7, 9, 1]  // v2
+    // = [10, 12, 11, 7]
 
     // post-merge O(log2(VECTOR_WIDTH))
-    // [10, 12, 11, 7]
-    // [22, 22, 18, 18] hadd
-    // [22, 18, 22, 18] interleave
-    // [40, 40, 40, 40] hadd
+    // [10, 12, 11, 7] hadd
+    // [22, 22, 18, 18] interleave
+    // [22, 18, 22, 18] hadd
+    // [40, 40, 40, 40] 
 
     // return result[0]
 
@@ -359,11 +360,13 @@ float arraySumVector(float* values, int N) {
         __cs149_vec_float partialResult;
         _cs149_vload_float(partialResult, values+i, maskAll);
 
-        // add all values in parallel
+        // vectorized accumulate
         _cs149_vadd_float(result, result, partialResult, maskAll);
     }
 
     int mergeIters = (int)log2(VECTOR_WIDTH);
+
+    // post-merge on result
     _cs149_hadd_float(result, result);
     mergeIters--;
 
