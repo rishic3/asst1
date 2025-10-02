@@ -9,9 +9,9 @@ See graph. The speedup is not linear for view 1, but is linear for view 2.
 ### 3. 
 
 When adding measurements per thread, there is apparent skew. 
-Taking 3 threads for instance, thread 1 - the thread that computes the middle horizontal section of the image - is 3x slower than threads 0 and 2. This makes sense looking at view 1 - the center of the image has a much denser section of fractals. 
+Taking 3 threads for instance, thread 1 - the thread that computes the middle horizontal section of the image - is 3x slower than threads 0 and 2. This makes sense looking at view 1 - the center strip of the image contains much more of the fractal boundary of the set (the small middle circle along with its boundary), requiring much more computation. 
 
-View 2 has less of this problem - you can see a slight skew with thread 0 with the group of fractals at the top, but the rest of hte image is more evenly distributed. 
+View 2 has less, but still some of this problem - there is a slight runtime skew with thread 0 being assigned the group of fractals at the top, but the rest of the image is more evenly distributed.
 
 ### 4.
 
