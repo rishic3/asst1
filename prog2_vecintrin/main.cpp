@@ -336,13 +336,13 @@ float arraySumVector(float* values, int N) {
     // N = 8, vector_width=4
     // [1, 5, 2, 6, 9, 7, 9, 1]  , sum = 40
     
-    // partial merge O(N/VECTOR_WIDTH)
+    // partial merge O(N/vector_width)
     // result = [0, 0, 0, 0]
     // += [1, 5, 2, 6]  // v1
     // += [9, 7, 9, 1]  // v2
     // = [10, 12, 11, 7]
 
-    // post-merge O(log2(VECTOR_WIDTH))
+    // post-merge O(log2(vector_width))
     // [10, 12, 11, 7] hadd
     // [22, 22, 18, 18] interleave
     // [22, 18, 22, 18] hadd
