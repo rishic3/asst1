@@ -21,7 +21,7 @@ void saxpyImproved(int N,
     }
 
     // synchronize NT stores to prevent data race between threads due to compile-time reordering
-    // maybe not necessary in this program...
+    // maybe not necessary in this program?...
     _mm_sfence();
     // COMPILER_BARRIER();
 
@@ -39,9 +39,6 @@ void saxpyImprovedUnrolled(int N,
     __m256 s = _mm256_set1_ps(scale);
     
     int i = 0;
-
-    // unrolling this loop gives a super-scalar CPU the opportunity to execute three other independent instructions
-    // if there is a memory stall on one.
 
     // before unroll:
     // .L3:
@@ -106,8 +103,6 @@ void saxpyImprovedUnrolled(int N,
         _mm256_stream_ps(&result[i], res);
     }
 
-    // synchronize NT stores to prevent data race between threads due to compile-time reordering
-    // maybe not necessary in this program...
     _mm_sfence();
     // COMPILER_BARRIER();
 

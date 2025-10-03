@@ -24,8 +24,7 @@ My results:
 
 My improved version was an AVX2 implementation that uses `_mm256_stream_ps`. According to the docs the "non-temporal" memory hint that this provides says that the data will not be reused soon, so there is no need to cache it (i.e., we don't need to read a cache-line and modify it, we can write `result[i]` directly to memory). This turns the 4 memory operations mentioned above into 3. (Albeit, I needed to change the result array to be 32-byte aligned via `float* resultImproved = (float*)aligned_alloc(32, N * sizeof(float))` for this to work).
 
-The unrolled version does a 4x unroll of the loop to get another 0.1x speedup. The idea was that - according to our slides - the myth machines are capable of at least 2 vector mul or 3 vector add instructions per cycle. By unrolling we're saying that there are 4 independent vector operations that can be run concurrently via ILP if there is a memory stall on one. In the assembly:
-
+The unrolled version does a 4x unroll of the loop to get another 0.1x speedup. The idea was that - according to our slides - the myth machines are capable of at least 2 vector mul or 3 vector add instructions per cycle. By unrolling we're saying that there are 4 independent vector operations that can be run concurrently via ILP In the assembly:
 ```cpp
   // before unroll:
   // .L3:
@@ -57,3 +56,5 @@ The unrolled version does a 4x unroll of the loop to get another 0.1x speedup. T
   //     jne	.L40
 ```
 Once unrolled the destination registers (%ymm2 - %ymm5) are independent so on a super-scalar CPU their dependency chains can be executed in parallel.
+
+Given that the program is still memory bandwidth bound ILP is likely not actually hiding memory stalls with compute (hence why the speedup isn't much); instead, we are able to have more cache line loads in flight (memory-level parallelism) - i.e., multiple issues of the vmoveups simultaneously (2 vectors = 2 * 8 * 32 bytes = 1 cache line) so potentially two cache line requests in flight at once.
