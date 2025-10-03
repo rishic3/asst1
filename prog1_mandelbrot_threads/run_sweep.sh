@@ -6,7 +6,7 @@ mkdir -p results
 results_file="results/results_view_${view}_$(date +%Y%m%d_%H%M%S).txt"
 echo "num threads: speedup" > $results_file
 
-for i in {2..8}
+for i in {1..8}
 do
     echo "running with $i threads"
 
