@@ -1,10 +1,15 @@
 #include <stdio.h>
 #include <algorithm>
+#include <stdlib.h>
 
 #include "CycleTimer.h"
 #include "saxpy_ispc.h"
 
 extern void saxpySerial(int N, float a, float* X, float* Y, float* result);
+
+extern void saxpyImproved(int N, float a, float* X, float* Y, float* result);
+
+extern void saxpyImprovedUnrolled(int N, float a, float* X, float* Y, float* result);
 
 
 // return GB/s
@@ -42,6 +47,8 @@ int main() {
     float* resultSerial = new float[N];
     float* resultISPC = new float[N];
     float* resultTasks = new float[N];
+    float* resultImproved = (float*)aligned_alloc(32, N * sizeof(float));
+    float* resultImprovedUnrolled = (float*)aligned_alloc(32, N * sizeof(float));
 
     // initialize array values
     for (unsigned int i=0; i<N; i++)
@@ -51,6 +58,8 @@ int main() {
         resultSerial[i] = 0.f;
         resultISPC[i] = 0.f;
         resultTasks[i] = 0.f;
+        resultImproved[i] = 0.f;
+        resultImprovedUnrolled[i] = 0.f;
     }
 
     //
@@ -65,7 +74,7 @@ int main() {
         minSerial = std::min(minSerial, endTime - startTime);
     }
 
-// printf("[saxpy serial]:\t\t[%.3f] ms\t[%.3f] GB/s\t[%.3f] GFLOPS\n",
+    // printf("[saxpy serial]:\t\t[%.3f] ms\t[%.3f] GB/s\t[%.3f] GFLOPS\n",
     //       minSerial * 1000,
     //       toBW(TOTAL_BYTES, minSerial),
     //       toGFLOPS(TOTAL_FLOPS, minSerial));
@@ -102,13 +111,45 @@ int main() {
     verifyResult(N, resultTasks, resultSerial);
 
     printf("[saxpy task ispc]:\t[%.3f] ms\t[%.3f] GB/s\t[%.3f] GFLOPS\n",
-           minTaskISPC * 1000,
-           toBW(TOTAL_BYTES, minTaskISPC),
-           toGFLOPS(TOTAL_FLOPS, minTaskISPC));
+        minTaskISPC * 1000,
+        toBW(TOTAL_BYTES, minTaskISPC),
+        toGFLOPS(TOTAL_FLOPS, minTaskISPC));
+
+    double minImproved = 1e30;
+    for (int i = 0; i < 3; ++i) {
+        double startTime = CycleTimer::currentSeconds();
+        saxpyImproved(N, scale, arrayX, arrayY, resultImproved);
+        double endTime = CycleTimer::currentSeconds();
+        minImproved = std::min(minImproved, endTime - startTime);
+    }
+
+    verifyResult(N, resultImproved, resultSerial);
+
+    printf("[saxpy improved]:\t[%.3f] ms\t[%.3f] GB/s\t[%.3f] GFLOPS\n",
+        minImproved * 1000,
+        toBW(TOTAL_BYTES, minImproved),
+        toGFLOPS(TOTAL_FLOPS, minImproved));
+
+    double minImprovedUnrolled = 1e30;
+    for (int i = 0; i < 3; ++i) {
+        double startTime = CycleTimer::currentSeconds();
+        saxpyImprovedUnrolled(N, scale, arrayX, arrayY, resultImprovedUnrolled);
+        double endTime = CycleTimer::currentSeconds();
+        minImprovedUnrolled = std::min(minImprovedUnrolled, endTime - startTime);
+    }
+
+    verifyResult(N, resultImprovedUnrolled, resultSerial);
+
+    printf("[saxpy improved unrolled]:\t[%.3f] ms\t[%.3f] GB/s\t[%.3f] GFLOPS\n",
+        minImprovedUnrolled * 1000,
+        toBW(TOTAL_BYTES, minImprovedUnrolled),
+        toGFLOPS(TOTAL_FLOPS, minImprovedUnrolled));
 
     printf("\t\t\t\t(%.2fx speedup from use of tasks)\n", minISPC/minTaskISPC);
-    //printf("\t\t\t\t(%.2fx speedup from ISPC)\n", minSerial/minISPC);
-    //printf("\t\t\t\t(%.2fx speedup from task ISPC)\n", minSerial/minTaskISPC);
+    // printf("\t\t\t\t(%.2fx speedup from ISPC)\n", minSerial/minISPC);
+    // printf("\t\t\t\t(%.2fx speedup from task ISPC)\n", minSerial/minTaskISPC);
+    printf("\t\t\t\t(%.2fx speedup from improved)\n", minISPC/minImproved);
+    printf("\t\t\t\t(%.2fx speedup from improved unrolled)\n", minISPC/minImprovedUnrolled);
 
     delete[] arrayX;
     delete[] arrayY;
