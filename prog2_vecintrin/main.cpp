@@ -263,7 +263,6 @@ void clampedExpVector(float* values, int* exponents, float* output, int N) {
 
   __cs149_vec_float x;
   __cs149_vec_int y;
-  __cs149_vec_int count;
   __cs149_vec_float result;
   __cs149_vec_int zero = _cs149_vset_int(0);
   __cs149_vec_int one = _cs149_vset_int(1);
@@ -297,13 +296,13 @@ void clampedExpVector(float* values, int* exponents, float* output, int N) {
 
     maskExpNonZero = _cs149_mask_not(maskExpIsZero);  // else
     _cs149_vmove_float(result, x, maskExpNonZero);  // result = x
-    _cs149_vsub_int(count, y, one, maskExpNonZero);  // count = y - 1
+    _cs149_vsub_int(y, y, one, maskExpNonZero);  // count = y - 1
 
-    _cs149_vgt_int(maskKeepExponentiating, count, zero, maskExpNonZero);
+    _cs149_vgt_int(maskKeepExponentiating, y, zero, maskExpNonZero);
     while (_cs149_cntbits(maskKeepExponentiating) > 0) {  // while (count > 0)
         _cs149_vmult_float(result, result, x, maskKeepExponentiating);  // result *= x
-        _cs149_vsub_int(count, count, one, maskKeepExponentiating);  // count -= 1
-        _cs149_vgt_int(maskKeepExponentiating, count, zero, maskKeepExponentiating);
+        _cs149_vsub_int(y, y, one, maskKeepExponentiating);  // count--
+        _cs149_vgt_int(maskKeepExponentiating, y, zero, maskKeepExponentiating);
     }
 
     _cs149_vgt_float(maskExceedsThresh, result, thresh, maskExpNonZero);  // if (result > 9.999999f)
