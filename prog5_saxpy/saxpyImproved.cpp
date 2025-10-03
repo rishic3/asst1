@@ -1,6 +1,9 @@
 #include <immintrin.h>
 #include <stdint.h>
 
+// https://preshing.com/20120625/memory-ordering-at-compile-time/
+// #define COMPILER_BARRIER() asm ("" ::: "memory")
+
 void saxpyImproved(int N,
     float scale,
     float X[],
@@ -16,7 +19,11 @@ void saxpyImproved(int N,
         __m256 res = _mm256_fmadd_ps(s, x, y);
         _mm256_stream_ps(&result[i], res);  // stream to memory
     }
+
+    // synchronize NT stores to prevent data race between threads due to compile-time reordering
+    // maybe not necessary in this program...
     _mm_sfence();
+    // COMPILER_BARRIER();
 
     for (; i < N; ++i) {
         result[i] = scale * X[i] + Y[i];
@@ -91,16 +98,20 @@ void saxpyImprovedUnrolled(int N,
         _mm256_stream_ps(&result[i+24], res3);
     }
     
-    // Handle remaining vectors
+    // handle remainder
     for (; i <= N - 8; i += 8) {
         __m256 x = _mm256_loadu_ps(&X[i]);
         __m256 y = _mm256_loadu_ps(&Y[i]);
         __m256 res = _mm256_fmadd_ps(s, x, y);
         _mm256_stream_ps(&result[i], res);
     }
-    _mm_sfence();
 
-    // Handle tail
+    // synchronize NT stores to prevent data race between threads due to compile-time reordering
+    // maybe not necessary in this program...
+    _mm_sfence();
+    // COMPILER_BARRIER();
+
+    // handle tail
     for (; i < N; ++i) {
         result[i] = scale * X[i] + Y[i];
     }
