@@ -15,11 +15,16 @@ This may explain why view 2 has slightly lower speedup; the boundaries tend to r
 
 ### 1. 
 
-Speedups:
-   - with `--tasks` on view 1: 9.94x
-     - speedup: ~1.98x over no tasks
-   - with `--tasks` on view 2: 7.23x
-     - speedup: ~1.67x over no tasks
+```text
+[mandelbrot serial]:            [194.035] ms
+Wrote image file mandelbrot-serial.ppm
+[mandelbrot ispc]:              [38.359] ms
+Wrote image file mandelbrot-ispc.ppm
+[mandelbrot multicore ispc]:    [19.652] ms
+Wrote image file mandelbrot-task-ispc.ppm
+                                (5.06x speedup from ISPC)
+                                (9.87x speedup from task ISPC)
+```
 
 ### 2.
 
